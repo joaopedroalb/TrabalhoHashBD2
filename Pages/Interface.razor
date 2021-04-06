@@ -1,0 +1,232 @@
+@page "/interface"
+@using interfaceblazor.Model.Pag
+@using System.Collections.Generic
+@using System.IO;
+@using System.Linq;
+
+<div class="interfaceContainer">
+    @if(numeroDasPaginasSetados==false){
+    <label style="font-size: 30px;">Digite o <strong>tamanho</strong> das paginas, o numero de tuplas é de <strong>@total</strong></label>
+    <br/>
+    <div class="input-group mb-3" style="width: 500px;">
+        <input type="number" @bind="@tamanhoPag" class="form-control" required/>
+        <button class="btn btn-primary" @onclick="addPagArr" style="margin-left: 5px;">Confirmar</button>
+    </div>
+    <br/>
+    <small>@avisoPaginas</small>
+}else{
+
+   @if(paginasPopulada==false){
+       //percorre o arquivo de texto
+    @foreach (string line in lines){
+        indexPaginaAux++;
+        bool aux = true;
+        while(aux){
+            //percorrer o vetor de paginas
+            @if(indexPagina<paginasArr.Count){
+             @if(paginasArr[indexPagina].linhas.Length > paginasArr[indexPagina].index){
+                 //adiciona na pagina
+                paginasArr[indexPagina].adicionarNaPag(line);
+                //adicionarHash(line,indexPagina,paginasArr[indexPagina].index);
+                aux = false;
+             }else{
+                indexPagina++;
+            }
+          }
+        } 
+        if(indexPaginaAux==466551){
+            paginasPopulada = true; 
+            addHashArr();
+            StateHasChanged();
+        }  
+    }
+   }else{
+    <div class="searchContainer">
+        <label style="color:black;">Pesquisar</label>
+        <br/>
+        <div class="btnSearchContainer">
+            <input class="form-control" type="text" @bind-value="@nomePesquisar" placeholder="Palavra"/>
+            <button class="btn btn-primary" @onclick="buscarKey">Pesquisar</button>
+        </div>
+        <br/>
+        @if(achouKey){
+            <p style="color: #00c132;">@info</p>
+        }else{
+            <p style="color: #ff0b0b;">@info</p>
+        }
+    </div>
+    <br/>
+    @if(!jaPercorreuOverflowArr){
+         @foreach (int index in OverflowArr()){
+            overflowsTotal += bucketContainer[index].buckets.Count - 1;
+         }
+        jaPercorreuOverflowArr=true;
+    }
+
+    @*Grid das infos*@
+    <div class="infoContainer">
+
+        <div class="parContainer">
+            <div class="infoBg"><p>Overflows: <strong>@overflowsTotal</strong></p></div>
+            <div class="infoBg"><p>Acesso a disco:<strong>@acessoDisco</strong></p></div>
+        </div>
+
+        <div class="parContainer">
+            <div class="infoBg"><p>O numero de colisoes: <strong>@colisoes</strong></p></div>
+            <div class="infoBg"><p>Tamanho da pagina: <strong>@tamanhoPag</strong></p></div>
+        </div>
+
+        <div class="parContainer">
+            <div class="infoBg"><p>Total de paginas: <strong>@paginasArr.Count</strong></p></div>
+            <div class="infoBg"><p>Ultima pesquisa: <strong>@ultimaPesquisa</strong></p></div>
+        </div>
+        
+    </div>
+    
+   }
+}
+
+</div>
+
+@code{
+    public string ultimaPesquisa = "";
+    public bool achouKey = false;
+    public bool numeroDasPaginasSetados = false;
+    public bool jaPercorreuOverflowArr = false;
+    public int overflowsTotal = 0;
+    public bool paginasPopulada = false;
+    public int indexPaginaAux = 0;
+
+    //out main variable
+    public static List<Pagina> paginasArr = new List<Pagina>();
+    public static BucketContainer[] bucketContainer = new BucketContainer[51839];
+    public int acessoDisco = 0;
+    public int colisoes = 0;
+
+    public static string nomePesquisar = "";
+
+    public static string info {get;set;} = "";
+
+    //func 
+    public static int HashLogic(string nome){
+        int tamanhoMod = 51839;
+        //int tamanhoMod = bucketContainer.Length;
+        long sum = 0, mult = 1;
+        for (int i = 0; i < nome.Length; i++){
+                mult = (i % 4 == 0) ? 1 : mult * 256;
+                sum += nome[i] * mult;
+        }
+        return (int)(Math.Abs(sum) % tamanhoMod);
+    }
+
+    public void adicionarHash(string nome, int id, int linha){
+        int hashLogic = HashLogic(nome);
+        if (bucketContainer[hashLogic] == null){
+                bucketContainer[hashLogic] = new BucketContainer(new BucketObjeto(nome, id, linha));
+        }else{
+            bucketContainer[hashLogic].adicionar(new BucketObjeto(nome, id, linha));
+            colisoes++;
+            bucketContainer[hashLogic].colisao++;
+         }
+    }
+
+    protected void buscarKey(){
+        ultimaPesquisa = nomePesquisar;
+        info = "";
+        StateHasChanged();
+        string key = nomePesquisar;
+        int keyHash = HashLogic(key);
+        bool achou = false;
+        if (bucketContainer[HashLogic(key)] != null){
+            foreach (Bucket bc in bucketContainer[HashLogic(key)].buckets){
+                foreach (BucketObjeto bo in bc.vetorBO){
+                    if (bo != null){
+                        if (bo.key.ToLower() == key.ToLower()){
+                            string nomeAux = paginasArr[bo.id].linhas[bo.linha - 1];
+                            info += $"ID da pagina: {bo.id}\r";
+                            info += $"Linha da pagina: {bo.linha}\r";
+                            info += $"Nome: {nomeAux}\n";
+                            acessoDisco++;
+                            achou = true;
+                            achouKey = true;
+                            StateHasChanged();
+                            break;
+                        }
+                    }
+                 }
+                    if (achou)
+                        break;
+            }
+                if (!achou){
+                    info = $"Não foi achado ninguem chamado {key}";
+                    achouKey = false;
+                    StateHasChanged();
+                }
+                    
+        }
+    }
+
+    public static List<int> OverflowArr(){
+        List<int> overflowArr = new List<int>();
+        int indexAux = 0;
+        foreach (BucketContainer bc in bucketContainer){
+            if (bc != null){
+                if (bc.buckets[0].overflow)
+                     overflowArr.Add(indexAux);
+            }
+                indexAux++;
+        }
+            return overflowArr;
+    }
+
+    public static int numOverflow(){
+        return OverflowArr().Count;
+    }
+
+    public static int overflowTotal(){
+        int overflowTotais = 0;
+        foreach(int index in OverflowArr()){
+            overflowTotais += bucketContainer[index].buckets.Count;
+        }
+        return overflowTotais;
+    }
+   
+
+    //in main variable
+
+    //leitura do arquivo words.txt
+    static string filePath = @"D:\Documents\Projetos\UNIFOR\BD\words.txt";
+    static List<String> lines = File.ReadAllLines(filePath).ToList();
+    int total = lines.Count;
+    int indexPagina = 0;
+    int tamanhoPag;
+    
+    public string avisoPaginas = "";
+
+    //faz a criação da array de paginas totalmente vazia
+    protected void addPagArr(){
+
+        while(total>0){
+            paginasArr.Add(new Pagina(tamanhoPag));
+            total = total - tamanhoPag;
+        }
+        
+        numeroDasPaginasSetados=true;
+        StateHasChanged();
+    }
+
+    protected void addHashArr(){
+        int line;
+        int index = 0 ;
+        foreach(var pagina in paginasArr){
+            line = 1;
+            foreach(string key in pagina.linhas){
+                if(!string.IsNullOrEmpty(key))
+                adicionarHash(key,index,line);
+                line++;
+            }
+            index++;
+        }
+    }
+
+}
