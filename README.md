@@ -8,6 +8,12 @@ todas as palavras o usuário pode pesquisar uma palavra na tabela e mostra onde 
 de colisões e overflows ocorreram ao salvar as informações. 
 </p>
 
+## 🔬 Tecnologias
+- C#
+- Blazor
+- HTML
+- CSS 
+
 ## 💎 Frontend
 <h1 align="center">
     <img  src="https://github.com/joaopedroalb/TrabalhoHashBD2/blob/main/wwwroot/readmeImg/test.gif" />
