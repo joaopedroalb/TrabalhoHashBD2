@@ -19,8 +19,10 @@ de colisões e overflows ocorreram ao salvar as informações.
     <img  src="https://github.com/joaopedroalb/TrabalhoHashBD2/blob/main/wwwroot/readmeImg/test.gif" />
 </h1>
 
-## 🖨️ Deseja alterar alguma coisa ? 
+## 🖨️ Como rodar na sua maquina ? 
 ```sh
-git clone https://github.com/joaopedroalb/faq-layout.git
-cd faq-layout
+No terminal da sua maquina digite 
+git clone https://github.com/joaopedroalb/TrabalhoHashBD2.git
+cd TrabalhoHashBD2
+dotnet watch run
 Agora você pode alterar pra deixar como você quiser 😉
